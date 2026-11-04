@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self' blob: data:; font-src 'self' data:">
+<title>PDF Studio</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header id="topbar">
+  <div class="brand">PDF Studio</div>
+  <div class="group">
+    <button id="btnOpen" title="Open PDF (Ctrl+O)">Open</button>
+    <button id="btnSave" class="primary" title="Save (Ctrl+S)" disabled>Save</button>
+    <button id="btnSaveAs" title="Save as… (Ctrl+Shift+S)" disabled>Save As</button>
+  </div>
+  <div class="group">
+    <button id="btnUndo" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+    <button id="btnRedo" title="Redo (Ctrl+Y)" disabled>↷ Redo</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="group" id="searchBox" hidden>
+    <input id="searchInput" type="search" placeholder="Find in document…" autocomplete="off">
+    <button id="searchPrev" title="Previous">▲</button>
+    <button id="searchNext" title="Next">▼</button>
+    <span id="searchCount" class="muted"></span>
+    <button id="searchClose" title="Close (Esc)">✕</button>
+  </div>
+  <div class="group">
+    <button id="btnFind" title="Find (Ctrl+F)" disabled>Find</button>
+    <button id="zoomOut" title="Zoom out (Ctrl+-)" disabled>−</button>
+    <span id="zoomLabel" class="zoomlabel">100%</span>
+    <button id="zoomIn" title="Zoom in (Ctrl++)" disabled>+</button>
+    <button id="zoomFit" title="Fit width" disabled>Fit</button>
+  </div>
+  <div class="group pager">
+    <input id="pageInput" type="number" min="1" value="1" disabled>
+    <span id="pageTotal" class="muted">/ 0</span>
+  </div>
+</header>
+
+<div id="toolbar">
+  <button class="tool active" data-tool="select" title="Select / move (V)"><i>↖</i><span>Select</span></button>
+  <button class="tool" data-tool="edit" title="Edit existing text — click a line of text (E)"><i>✎</i><span>Edit text</span></button>
+  <button class="tool" data-tool="text" title="Add new text (T)"><i>T</i><span>Add text</span></button>
+  <button class="tool" data-tool="signature" title="Add signature (S)"><i>✍</i><span>Sign</span></button>
+  <button class="tool" data-tool="image" title="Insert image (I)"><i>▣</i><span>Image</span></button>
+  <span class="sep"></span>
+  <button class="tool" data-tool="highlight" title="Highlight (H)"><i>▮</i><span>Highlight</span></button>
+  <button class="tool" data-tool="pen" title="Freehand draw (P)"><i>〰</i><span>Draw</span></button>
+  <button class="tool" data-tool="rect" title="Rectangle (R)"><i>▭</i><span>Rectangle</span></button>
+  <button class="tool" data-tool="ellipse" title="Ellipse (O)"><i>◯</i><span>Ellipse</span></button>
+  <button class="tool" data-tool="line" title="Line (L)"><i>╱</i><span>Line</span></button>
+  <button class="tool" data-tool="arrow" title="Arrow (A)"><i>➜</i><span>Arrow</span></button>
+  <button class="tool" data-tool="whiteout" title="Whiteout — hides content visually (W). The hidden text stays in the file."><i>□</i><span>Whiteout</span></button>
+</div>
+
+<div id="props">
+  <div class="pg pg-text">
+    <label>Font <select id="pFont"></select></label>
+    <label>Size <input id="pSize" type="number" min="4" max="200" value="14"></label>
+    <button id="pBold" class="tgl" title="Bold"><b>B</b></button>
+    <button id="pItalic" class="tgl" title="Italic"><i>I</i></button>
+    <label>Color <input id="pColor" type="color" value="#000000"></label>
+  </div>
+  <div class="pg pg-stroke">
+    <label>Line <input id="pStroke" type="color" value="#e11d48"></label>
+    <label>Width <input id="pWidth" type="number" min="0.5" max="40" step="0.5" value="2"></label>
+  </div>
+  <div class="pg pg-fill">
+    <label><input id="pFillOn" type="checkbox"> Fill</label>
+    <input id="pFill" type="color" value="#fde047">
+  </div>
+  <div class="pg pg-hl">
+    <label>Highlight <input id="pHl" type="color" value="#facc15"></label>
+  </div>
+  <div class="pg pg-sel">
+    <button id="pDup" title="Duplicate (Ctrl+D)">Duplicate</button>
+    <button id="pDel" class="danger" title="Delete (Del)">Delete</button>
+  </div>
+  <div class="pg hint" id="hint">Open a PDF to start.</div>
+</div>
+
+<main id="main">
+  <aside id="sidebar">
+    <div id="pageTools">
+      <button id="pgRotL" title="Rotate left" disabled>⟲</button>
+      <button id="pgRotR" title="Rotate right" disabled>⟳</button>
+      <button id="pgUp" title="Move up" disabled>↑</button>
+      <button id="pgDown" title="Move down" disabled>↓</button>
+      <button id="pgBlank" title="Insert blank page after" disabled>＋</button>
+      <button id="pgInsert" title="Insert pages from another PDF after" disabled>⤓</button>
+      <button id="pgExtract" title="Save selected pages as a new PDF" disabled>⧉</button>
+      <button id="pgDel" class="danger" title="Delete selected pages" disabled>🗑</button>
+    </div>
+    <div id="thumbs"></div>
+  </aside>
+  <section id="viewer" data-tool="select">
+    <div id="pages"></div>
+    <div id="empty">
+      <div class="card">
+        <h1>PDF Studio</h1>
+        <p>Edit text, sign, annotate and organise pages.</p>
+        <button id="emptyOpen" class="primary big">Open a PDF</button>
+        <p class="muted">or drag &amp; drop a file here</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" hidden></div>
+
+<div id="sigModal" class="modal" hidden>
+  <div class="dialog">
+    <h2>Add signature</h2>
+    <div id="sigSaved" class="saved"></div>
+    <div class="tabs">
+      <button class="tab active" data-tab="draw">Draw</button>
+      <button class="tab" data-tab="type">Type</button>
+      <button class="tab" data-tab="upload">Upload image</button>
+    </div>
+    <div class="tabpane" data-pane="draw">
+      <canvas id="sigCanvas" width="640" height="200"></canvas>
+      <div class="row">
+        <label>Ink <input id="sigInk" type="color" value="#0b2a6f"></label>
+        <button id="sigClear">Clear</button>
+      </div>
+    </div>
+    <div class="tabpane" data-pane="type" hidden>
+      <input id="sigText" type="text" placeholder="Type your name" maxlength="40">
+      <div id="sigStyles" class="styles"></div>
+    </div>
+    <div class="tabpane" data-pane="upload" hidden>
+      <input id="sigFile" type="file" accept="image/*">
+      <label class="check"><input id="sigRemoveBg" type="checkbox" checked> Remove white background</label>
+      <canvas id="sigUploadPreview" width="640" height="200"></canvas>
+    </div>
+    <div class="row end">
+      <label class="check"><input id="sigRemember" type="checkbox" checked> Save for reuse</label>
+      <span class="spacer"></span>
+      <button id="sigCancel">Cancel</button>
+      <button id="sigUse" class="primary">Use signature</button>
+    </div>
+  </div>
+</div>
+
+<input id="imageFile" type="file" accept="image/*" hidden>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/fontkit.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
